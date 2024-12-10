@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infix to Postfix Conversion with 3D Stack Effect</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #d4b441;
+            text-align: center;
+            padding: 20px;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 300px;
+            margin-bottom: 20px;
+            border: 2px solid #1accd2;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #cc46ca;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #ab297e;
+        }
+
+        #postfix {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* Stack 3D effect */
+        .stack {
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            justify-content: flex-end;
+            height: 200px;
+            width: 200px;
+            margin: 20px auto;
+            perspective: 1000px;
+        }
+
+        .stack .element {
+            background-color: #282863;
+            color: white;
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            font-size: 18px;
+            transform-origin: bottom center;
+            transition: transform 0.5s ease;
+        }
+
+        .stack .element.inactive {
+            opacity: 0.3;
+        }
+
+        .stack .element.active {
+            transform: translateZ(30px);
+        }
+
+        /* Hidden content initially */
+        #nextPage {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Explanation Page -->
+    <div id="explanationPage">
+        <h1>Infix to Postfix Conversion</h1>
+        <p>
+            <strong>Explanation:</strong> Converting an infix expression (where operators are placed between operands, like A+B) 
+            to a postfix expression (where operators follow their operands, like AB+) involves understanding operator precedence, 
+            associativity, and how to process parentheses.
+        </p>
+
+        <ul>
+            <li>Step 1: Initialize an empty stack to store operators and an empty list for the postfix expression.</li>
+            <li>Step 2: Process the infix expression from left to right:</li>
+            <ul>
+                <li><strong>Operand</strong>: Add directly to the postfix expression.</li>
+                <li><strong>Left Parenthesis</strong>: Push it onto the stack.</li>
+                <li><strong>Right Parenthesis</strong>: Pop from the stack to the postfix expression until a left parenthesis is encountered.</li>
+                <li><strong>Operator</strong>: Pop operators from the stack to the output list based on precedence.</li>
+            </ul>
+            <li>Step 3: After processing, pop all remaining operators from the stack to the postfix expression.</li>
+        </ul>
+
+        <button onclick="goToNextPage()">Next</button>
+    </div>
+
+    <!-- Postfix Output Page -->
+    <div id="nextPage">
+        <h1>Infix to Postfix Conversion Result</h1>
+
+        <input type="text" id="infixInput" placeholder="Enter Infix Expression (e.g., A+B*(C-D))">
+        <br>
+        <button onclick="convertInfixToPostfix()">Convert</button>
+
+        <div id="postfix"></div>
+
+        <div class="stack" id="stackContainer">
+            <!-- Stack will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        function goToNextPage() {
+            // Hide explanation and show the next page
+            document.getElementById('explanationPage').style.display = 'none';
+            document.getElementById('nextPage').style.display = 'block';
+        }
+
+        function precedence(op) {
+            if (op === '+' || op === '-') return 1;
+            if (op === '*' || op === '/') return 2;
+            if (op === '$' || op === '^') return 3;  // Handle exponentiation with precedence
+            return 0;
+        }
+
+        function isOperator(c) {
+            return (c === '+' || c === '-' || c === '*' || c === '/' || c === '$' || c === '^');
+        }
+
+        function convertInfixToPostfix() {
+            const infix = document.getElementById('infixInput').value;
+            let stack = [];
+            let postfix = [];
+            let steps = [];
+
+            for (let i = 0; i < infix.length; i++) {
+                let char = infix[i];
+
+                // If the character is an operand, add it to the postfix expression
+                if (!isOperator(char) && char !== '(' && char !== ')') {
+                    postfix.push(char);
+                }
+                // If the character is an opening parenthesis, push it to the stack
+                else if (char === '(') {
+                    stack.push(char);
+                }
+                // If the character is a closing parenthesis, pop from the stack until an opening parenthesis
+                else if (char === ')') {
+                    while (stack.length > 0 && stack[stack.length - 1] !== '(') {
+                        postfix.push(stack.pop());
+                    }
+                    stack.pop(); // Discard the '('
+                }
+                // If the character is an operator
+                else if (isOperator(char)) {
+                    while (stack.length > 0 && precedence(stack[stack.length - 1]) >= precedence(char)) {
+                        postfix.push(stack.pop());
+                    }
+                    stack.push(char);
+                }
+
+                // Capture the current state of the stack for visualization
+                steps.push({ stack: [...stack], postfix: [...postfix] });
+            }
+
+            // Pop all remaining operators from the stack
+            while (stack.length > 0) {
+                postfix.push(stack.pop());
+            }
+
+            document.getElementById('postfix').textContent = 'Postfix: ' + postfix.join('');
+            visualizeStack(steps);
+        }
+
+        function visualizeStack(steps) {
+            const stackContainer = document.getElementById('stackContainer');
+            stackContainer.innerHTML = ''; // Clear the previous stack
+
+            let stepIndex = 0;
+
+            function showStep() {
+                if (stepIndex < steps.length) {
+                    const step = steps[stepIndex];
+                    updateStackDisplay(step.stack);
+                    stepIndex++;
+                    setTimeout(showStep, 1000);  // Adjust time for a smoother transition
+                }
+            }
+
+            showStep();
+
+            function updateStackDisplay(stack) {
+                // Create stack elements
+                stackContainer.innerHTML = '';
+                stack.forEach((item, index) => {
+                    const element = document.createElement('div');
+                    element.classList.add('element');
+                    if (index < stack.length - 1) {
+                        element.classList.add('inactive');
+                    } else {
+                        element.classList.add('active');
+                    }
+                    element.textContent = item;
+                    stackContainer.appendChild(element);
+                });
+            }
+        }
+    </script>
+
+</body>
+</html>
